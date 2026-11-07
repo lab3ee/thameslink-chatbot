@@ -1,0 +1,25 @@
+# Core Framework
+fastapi>=0.115.0
+uvicorn[standard]>=0.32.0
+pydantic>=2.9.0
+pydantic-settings>=2.6.0
+
+# LlamaIndex Core & Integrations
+llama-index-core>=0.11.0
+llama-index-llms-ollama>=0.3.0
+llama-index-embeddings-ollama>=0.3.0
+llama-index-vector-stores-qdrant>=0.3.0
+
+# Qdrant client
+qdrant-client>=1.12.0
+fastembed>=0.4.0
+
+# Document Parsing & OCR
+docling>=2.0.0
+llama-index-readers-docling>=0.2.0
+
+# Utilities
+python-multipart>=0.0.12
+requests>=2.32.0
+httpx>=0.27.0
+loguru>=0.7.2

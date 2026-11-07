@@ -1,0 +1,97 @@
+{
+  "name": "Train Fault Code Troubleshooting Assistant",
+  "nodes": [
+    {
+      "parameters": {
+        "options": {
+          "allowFileUploads": false
+        }
+      },
+      "id": "chat-trigger-01",
+      "name": "When chat message received",
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        240,
+        300
+      ],
+      "webhookId": "train-troubleshoot-chat"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.orb.internal:8000/api/v1/query",
+        "sendBody": true,
+        "specifyBody": "fields",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "query",
+              "value": "={{ .chatInput }}"
+            },
+            {
+              "name": "train_type",
+              "value": "Class 700"
+            },
+            {
+              "name": "similarity_top_k",
+              "value": 5
+            }
+          ]
+        },
+        "options": {
+          "timeout": 90000
+        }
+      },
+      "id": "http-query-02",
+      "name": "Call Local RAG API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        480,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = .item.json;\nlet text = response.answer || \"No response received.\";\n\nif (response.citations && response.citations.length > 0) {\n  text += \"\n\n---\n#### Manual References\n\";\n  const seen = new Set();\n  response.citations.forEach((c) => {\n    const key = (c.manual_name || '') + '-' + (c.page || '');\n    if (!seen.has(key)) {\n      seen.add(key);\n      text += \"- **\" + c.manual_name + \"** \u2014 Page **\" + (c.page || 'N/A') + \"** (*\" + (c.section || 'General') + \"*)\n\";\n    }\n  });\n}\n\nreturn [{ json: { response: text, text: text, output: text } }];"
+      },
+      "id": "format-reply-03",
+      "name": "Format Reply & Citations",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        720,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "When chat message received": {
+      "main": [
+        [
+          {
+            "node": "Call Local RAG API",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call Local RAG API": {
+      "main": [
+        [
+          {
+            "node": "Format Reply & Citations",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

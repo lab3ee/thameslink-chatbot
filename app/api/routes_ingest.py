@@ -47,14 +47,23 @@ async def ingest_manuals(request: IngestRequest):
 
         for f in files_to_process:
             try:
-                manual_name = request.manual_name or f.stem
+                # Automatically default manual_name to the file's name (e.g. "etcs_broschuere_ES64U2.pdf")
+                # if the user did not supply a custom manual_name in the request.
+                manual_name = request.manual_name if request.manual_name else f.name
+                
+                # Deduplication check: skip if file is already in Qdrant
+                if rag.is_file_already_ingested(f.name):
+                    logger.info(f"File '{f.name}' already ingested into Qdrant. Skipping.")
+                    continue
+
                 docs = ingest_service.load_document(f)
                 nodes = ingest_service.process_and_chunk(
                     docs=docs,
                     train_type=request.train_type or "General",
                     subsystem=request.subsystem or "General",
                     manual_name=manual_name,
-                    document_category=request.document_category
+                    document_category=request.document_category,
+                    source_file_name=f.name
                 )
                 upserted = rag.upsert_nodes(nodes)
                 total_chunks += upserted

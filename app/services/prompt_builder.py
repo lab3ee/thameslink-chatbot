@@ -9,26 +9,17 @@ class PromptBuilder:
     Prevents hallucinations and enforces mandatory manual citations.
     """
 
-    SYSTEM_PROMPT = """You are a technical reference assistant for railway maintenance and operations staff. You have access to official maintenance manuals, rulebooks, technical specifications, and safety documents.
+    SYSTEM_PROMPT = """You are a technical reference assistant for railway maintenance and operations staff.
+You have access to excerpts from official maintenance manuals, rulebooks, technical specifications, and safety documents.
 
-ABSOLUTE RULES — these override everything else:
-1. You MUST NOT use any knowledge from your training data. You have no independent railway knowledge.
-2. You MUST NOT invent, infer, or extrapolate any procedure, specification, measurement, rule, or component designation that is not explicitly stated in the provided manual excerpts.
-3. If the manual excerpts do not contain information relevant to the question, you MUST respond with exactly this sentence and nothing else:
+ABSOLUTE RULES:
+1. Use ONLY the facts directly stated in the Reference Manual Excerpts. You have no independent railway knowledge.
+2. If the excerpts do not contain enough information to answer the question, output ONLY:
    "The provided manuals do not contain information relevant to this query."
-4. If the excerpts partially cover the question, state only what the manuals explicitly say and clearly indicate which parts are not covered.
-5. Never use phrases like "typically", "generally", "in most cases", "you should", or "it is common to" — these indicate inference from training data, which is forbidden.
-
-OUTPUT FORMAT:
-Use clean, professional technical Markdown. Do NOT use emojis.
-Structure your response appropriately for the type of question:
-
-- For fault code queries: use sections Fault Diagnosis, Safety & Isolation Precautions, Remedial Action Procedure, Component & Circuit Breaker Designations.
-- For procedural questions: use numbered steps.
-- For explanatory or descriptive questions: use clear paragraphs with bold sub-headings where helpful.
-- For regulatory or rules questions: quote the relevant rule or clause directly, then explain its application.
-
-Always end your response with a Manual Reference section listing the manual name, section, and page number the information was drawn from."""
+3. Do NOT repeat or echo the user's question, prompt instructions, system rules, or headers like "TECHNICIAN QUERY:" or "OUTPUT FORMAT REQUIREMENTS:".
+4. Do NOT output a citations section in your text (citations are automatically attached by the system).
+5. Output ONLY the direct technical answer in clean Markdown, without emojis.
+6. If the excerpts are in German and the question is in English (or vice versa), translate the technical information accurately."""
 
     @classmethod
     def format_context_prompt(cls, query: str, nodes: List[NodeWithScore], train_type: Optional[str] = None, subsystem: Optional[str] = None) -> str:
@@ -38,41 +29,26 @@ Always end your response with a Manual Reference section listing the manual name
             manual = metadata.get("manual_name", "Unknown Manual")
             section = metadata.get("section_title", "Unknown Section")
             page = metadata.get("page_number", "N/A")
-            train = metadata.get("train_type", train_type or "Generic")
-            subsys = metadata.get("subsystem", subsystem or "General")
             
-            header = f"[Manual: {manual} | Section: {section} | Page: {page}]"
+            header = f"--- [Excerpt {i} | Manual: {manual} | Section: {section} | Page: {page}] ---"
             content = node.get_content().strip()
             context_parts.append(f"{header}\n{content}")
 
-        joined_context = "\n\n".join(context_parts) if context_parts else "No relevant manual excerpts found."
+        joined_context = "\n\n".join(context_parts) if context_parts else "No excerpts available."
 
         meta_info = []
-        if train_type:
-            meta_info.append(f"Train Class: {train_type}")
-        if subsystem:
-            meta_info.append(f"Subsystem: {subsystem}")
-        meta_str = f" ({', '.join(meta_info)})" if meta_info else ""
+        if train_type and train_type.strip() and train_type.lower() != "general":
+            meta_info.append(f"Train Class: {train_type.strip()}")
+        if subsystem and subsystem.strip() and subsystem.lower() != "general":
+            meta_info.append(f"Subsystem: {subsystem.strip()}")
+        meta_str = f" Context: ({', '.join(meta_info)})\n" if meta_info else ""
 
-        user_prompt = f"""{cls.SYSTEM_PROMPT}
-
-### TECHNICIAN QUERY{meta_str}:
-{query}
-
-### OFFICIAL REFERENCE MANUAL CONTEXT:
+        user_prompt = f"""Reference Manual Excerpts:
 {joined_context}
 
-### OUTPUT FORMAT REQUIREMENTS:
-Format your reply clearly in clean, professional technical Markdown for depot technicians. Do NOT use emojis.
-- Use clean bold section headers:
-  ### Fault Diagnosis
-  ### Safety & Isolation Precautions
-  ### Remedial Action Procedure
-  ### Component & Circuit Breaker Designations
-- Use ordered numbers (1., 2., 3.) for the remedial action procedure.
-- Put all component codes, switches, and circuit breakers in backticks (e.g. `=24-F01`, `=24-S02`).
-- Never dump raw unformatted text blocks.
-- Answer strictly from the excerpts provided."""
+{meta_str}Question: {query}
+
+Provide only the direct technical answer below:"""
 
         return user_prompt
 

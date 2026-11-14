@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from loguru import logger
 
 from app.core.config import settings
@@ -19,6 +20,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Mount manuals directory as static files so browser can open PDFs directly
+app.mount("/manuals", StaticFiles(directory=str(settings.MANUALS_DIR)), name="manuals")
 
 app.include_router(query_router, prefix=settings.API_V1_STR, tags=["Query"])
 app.include_router(ingest_router, prefix=settings.API_V1_STR, tags=["Ingestion"])

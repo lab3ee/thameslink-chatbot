@@ -11,6 +11,8 @@ class CitationSource(BaseModel):
     manual_name: str
     section: Optional[str] = None
     page: Optional[int] = None
+    source_file: Optional[str] = None
+    url: Optional[str] = None
     text_snippet: str
     score: Optional[float] = None
 

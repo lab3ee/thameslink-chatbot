@@ -238,10 +238,18 @@ class RAGService:
         citations: List[CitationSource] = []
         for n in relevant_nodes:
             meta = n.metadata or {}
+            source_file = meta.get("source_file") or meta.get("file_name") or Path(meta.get("file_path", "")).name or "Manual.pdf"
+            page_num = meta.get("page_number")
+            
+            # Construct a direct URL with standard PDF page anchor: #page=X
+            doc_url = f"http://localhost:8000/manuals/{source_file}#page={page_num}" if page_num else f"http://localhost:8000/manuals/{source_file}"
+
             citations.append(CitationSource(
-                manual_name=meta.get("manual_name", "Maintenance Manual"),
+                manual_name=meta.get("manual_name", source_file),
                 section=meta.get("section_title"),
-                page=meta.get("page_number"),
+                page=page_num,
+                source_file=source_file,
+                url=doc_url,
                 text_snippet=n.get_content()[:280] + "...",
                 score=n.score
             ))

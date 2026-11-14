@@ -54,7 +54,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const response = .item.json;\nlet text = response.answer || \"No response received.\";\n\nif (response.citations && response.citations.length > 0) {\n  text += \"\n\n---\n#### Manual References\n\";\n  const seen = new Set();\n  response.citations.forEach((c) => {\n    const key = (c.manual_name || '') + '-' + (c.page || '');\n    if (!seen.has(key)) {\n      seen.add(key);\n      text += \"- **\" + c.manual_name + \"** \u2014 Page **\" + (c.page || 'N/A') + \"** (*\" + (c.section || 'General') + \"*)\n\";\n    }\n  });\n}\n\nreturn [{ json: { response: text, text: text, output: text } }];"
+        "jsCode": "const response = $input.first().json;\nlet text = response.answer || \"No response received.\";\n\nif (response.citations && response.citations.length > 0) {\n  text += \"\\n\\n---\\n#### Manual References\\n\";\n  const seen = new Set();\n  response.citations.forEach((c) => {\n    const key = (c.manual_name || '') + '-' + (c.page || '');\n    if (!seen.has(key)) {\n      seen.add(key);\n      const pageLabel = c.page ? (\"Page \" + c.page) : \"Document\";\n      const pageLink = c.url ? (\"[\" + pageLabel + \"](\" + c.url + \")\") : (\"**\" + pageLabel + \"**\");\n      text += \"- **\" + c.manual_name + \"** \u2014 \" + pageLink + \" (*\" + (c.section || \"General\") + \"*)\\n\";\n    }\n  });\n}\n\nreturn [{ json: { response: text, text: text, output: text } }];\n"
       },
       "id": "format-reply-03",
       "name": "Format Reply & Citations",
